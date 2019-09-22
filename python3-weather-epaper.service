@@ -1,5 +1,6 @@
 [Unit]
 Description=python3 weather epaper display
+After=network.target
 
 [Service]
 Restart=always
@@ -8,4 +9,4 @@ EnvironmentFile=/etc/python3-weather-epaper/config
 ExecStart=/usr/bin/python3-weather-epaper/python3-weather-epaper.py
 
 [Install]
-WantedBy=network-online.target
+WantedBy=multi-user.target
