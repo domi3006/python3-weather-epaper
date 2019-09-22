@@ -77,20 +77,12 @@ def main():
     epd.init()
     epd.Clear(0xFF)
 
-    clock_last = datetime.datetime.now(tz).replace(second = 0, microsecond = 0) 
-    - datetime.timedelta(minutes = 1)
-    clock_last_fail = clock_last
-    update = False
-
     while True:
-        update = False
         Himage = Image.new('1', (epd4in2.EPD_WIDTH, epd4in2.EPD_HEIGHT), 255)  # 255: clear the frame
         draw = ImageDraw.Draw(Himage)
-        clock_current = datetime.datetime.now(tz).replace(second = 0, microsecond = 0)
-        if clock_current > clock_last:
-            update = True
-            clock_last_fail = clock_last
-            clock_last = clock_current
+        clock_current = datetime.datetime.now(tz)
+        clock_dest = clock_current.replace(second = 0, microsecond = 0) + datetime.timedelta(
+            minutes = 1, seconds = 1)
 
         clock = clock_current.strftime("%H:%M")
         draw.text(((epd4in2.EPD_WIDTH - len(clock)*font_clock_width) / 2, 0), clock, font = font_clock, fill = 0)
@@ -100,32 +92,36 @@ def main():
         date = clock_current.strftime("%a - %d.%m.%y")
         draw.text(((epd4in2.EPD_WIDTH - len(date)*font_misc_width) / 2, font_clock_height + 20), date, font = font_misc, fill = 0)
         
-        if update:
-            weather, forecast = get_weather()
-            if weather == None:
-                clock_last = clock_last_fail
-                epd.display(epd.getbuffer(Himage))
-                continue
-            weather_list = forecast.get_weathers()
-            forecast_disp = []
-
-            for w in weather_list:
-                w_time = w.get_reference_time('date')
-                w_time = w_time.astimezone(tz)
-                w_time_cur = clock_current + datetime.timedelta(hours = 3)
-                if w_time < w_time_cur:
-                    continue
-                forecast_disp.append(w)
-
-            draw_weather(draw, Himage, 0, (font_clock_height + font_misc_height + 30), weather, "Now")
-            draw_weather(draw, Himage, 100, (font_clock_height + font_misc_height + 30), 
-                    forecast_disp[0], conv_weather_time(forecast_disp[0]))
-            draw_weather(draw, Himage, 200, (font_clock_height + font_misc_height + 30), 
-                    forecast_disp[2], conv_weather_time(forecast_disp[2]))
-            draw_weather(draw, Himage, 300, (font_clock_height + font_misc_height + 30), 
-                    forecast_disp[4], conv_weather_time(forecast_disp[4]))
+        weather, forecast = get_weather()
+        if weather == None:
+            clock_last = clock_last_fail
             epd.display(epd.getbuffer(Himage))
-        time.sleep(10)
+            continue
+        weather_list = forecast.get_weathers()
+        forecast_disp = []
+
+        for w in weather_list:
+            w_time = w.get_reference_time('date')
+            w_time = w_time.astimezone(tz)
+            w_time_cur = clock_current + datetime.timedelta(hours = 3)
+            if w_time < w_time_cur:
+                continue
+            forecast_disp.append(w)
+
+        draw_weather(draw, Himage, 0, (font_clock_height + font_misc_height + 30), weather, "Now")
+        draw_weather(draw, Himage, 100, (font_clock_height + font_misc_height + 30),
+                forecast_disp[0], conv_weather_time(forecast_disp[0]))
+        draw_weather(draw, Himage, 200, (font_clock_height + font_misc_height + 30),
+                forecast_disp[2], conv_weather_time(forecast_disp[2]))
+        draw_weather(draw, Himage, 300, (font_clock_height + font_misc_height + 30),
+                forecast_disp[4], conv_weather_time(forecast_disp[4]))
+        epd.display(epd.getbuffer(Himage))
+
+        clock_current = datetime.datetime.now(tz)
+
+        if clock_dest < clock_current:
+            continue
+        time.sleep(int((clock_dest - clock_current).total_seconds()))
 
     epd.sleep()
 
